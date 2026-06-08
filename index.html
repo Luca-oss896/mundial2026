@@ -278,6 +278,50 @@
     cursor: pointer; margin-top: 1rem; text-decoration: underline;
   }
   .modal-box .btn-skip:hover { color: var(--text); }
+  .modal-box .btn-secondary {
+    display: block; width: 100%; padding: 0.7rem;
+    border-radius: 10px;
+    background: rgba(139,92,246,0.08);
+    border: 1px solid rgba(139,92,246,0.15);
+    color: var(--fg); font-size: 0.9rem; font-weight: 500;
+    cursor: pointer; transition: all 0.2s;
+    margin-top: 0.5rem;
+  }
+  .modal-box .btn-secondary:hover {
+    background: rgba(139,92,246,0.18);
+    border-color: var(--purple);
+  }
+
+  .prompt-user {
+    display: flex; align-items: center; gap: 0.6rem;
+    justify-content: center;
+    padding: 1rem;
+    margin: 0.75rem 0;
+    background: rgba(139,92,246,0.06);
+    border-radius: 10px;
+    border: 1px solid rgba(139,92,246,0.12);
+  }
+  .prompt-user .prompt-icon { font-size: 1.5rem; }
+  .prompt-user .prompt-name { font-weight: 700; color: var(--fg); font-size: 1.05rem; }
+  .prompt-user .prompt-id { font-size: 0.7rem; color: var(--text-dim); }
+
+  .user-badge .btn-change {
+    display: inline-flex; align-items: center;
+    padding: 0.2rem 0.45rem;
+    border-radius: 4px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.08);
+    color: var(--text-dim);
+    font-size: 0.6rem;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.2s;
+  }
+  .user-badge .btn-change:hover {
+    background: rgba(239,68,68,0.12);
+    border-color: rgba(239,68,68,0.25);
+    color: #ef4444;
+  }
 
   /* --- Admin system --- */
   .nav-admin-link {
@@ -1667,9 +1711,9 @@
         &#x1F3C6; Ranking de pronosticadores
         <span class="pred-bar">
           <span class="user-badge" id="userBadge" style="display:none">
-            <span class="user-icon">&#x1F3AF;</span>
+            <span class="user-icon">&#x1F464;</span>
             <span class="user-name" id="userDisplayName"></span>
-            <button class="btn-change" id="btnChangeUser">Cambiar</button>
+            <button class="btn-change" id="btnChangeUser">&#x2716; Cambiar</button>
           </span>
           <span class="admin-badge" id="adminBadge" style="display:none">
             <span class="admin-label">&#x1F511; Admin</span>
@@ -2131,6 +2175,7 @@ function createUser(name) {
 }
 
 function showUserModal() {
+  document.getElementById('userPrompt').style.display = 'none';
   document.getElementById('userModal').style.display = '';
   document.getElementById('usernameInput').value = '';
   document.getElementById('modalError').style.display = 'none';
@@ -2141,15 +2186,34 @@ function hideUserModal() {
   document.getElementById('userModal').style.display = 'none';
 }
 
+function showUserPrompt() {
+  var user = getCurrentUser();
+  if (!user) { showUserModal(); return; }
+  document.getElementById('promptUserName').textContent = user.name;
+  document.getElementById('promptUserId').textContent = user.id;
+  document.getElementById('userPrompt').style.display = '';
+}
+
+function hideUserPrompt() {
+  document.getElementById('userPrompt').style.display = 'none';
+}
+
 function applyUser(user) {
-  document.getElementById('userDisplayName').textContent = user.name;
   document.getElementById('userBadge').style.display = '';
+  document.getElementById('userDisplayName').textContent = user.name;
   document.getElementById('btnSavePred').disabled = true;
   updateSaveButton();
 }
 
+function switchUser() {
+  localStorage.removeItem(USER_KEY);
+  document.getElementById('userBadge').style.display = 'none';
+  document.getElementById('btnSavePred').disabled = true;
+  showUserModal();
+}
+
 function initUserSystem() {
-  // Register event listeners once (regardless of user state)
+  // Register event listeners once
   document.getElementById('btnConfirmUser').addEventListener('click', function() {
     var name = document.getElementById('usernameInput').value.trim();
     if (!name || name.length < 2) { document.getElementById('modalError').style.display = ''; return; }
@@ -2160,14 +2224,16 @@ function initUserSystem() {
   document.getElementById('usernameInput').addEventListener('keydown', function(e) {
     if (e.key === 'Enter') document.getElementById('btnConfirmUser').click();
   });
-  document.getElementById('btnChangeUser').addEventListener('click', function() {
-    localStorage.removeItem(USER_KEY);
-    document.getElementById('btnSavePred').disabled = true;
-    showUserModal();
+  document.getElementById('btnChangeUser').addEventListener('click', switchUser);
+  document.getElementById('btnContinueUser').addEventListener('click', function() {
+    hideUserPrompt();
+    var user = getCurrentUser();
+    if (user) applyUser(user);
   });
-  // Check existing user
+  document.getElementById('btnSwitchUser').addEventListener('click', switchUser);
+  // On load: show prompt if user exists, else show modal
   var user = getCurrentUser();
-  if (user) { applyUser(user); }
+  if (user) { showUserPrompt(); }
   else { showUserModal(); }
 }
 
@@ -3156,6 +3222,21 @@ function renderDashboard() {
     <button class="btn-primary" id="btnConfirmAdmin">Ingresar</button>
     <div class="modal-error" id="adminModalError">C&oacute;digo incorrecto</div>
     <button class="btn-skip" id="btnCancelAdmin">Cancelar</button>
+  </div>
+</div>
+
+<!-- User prompt overlay -->
+<div class="modal-overlay" id="userPrompt" style="display:none">
+  <div class="modal-box">
+    <h2>&#x1F3AF; Quiniela Mundial 2026</h2>
+    <p>&iquest;Segu&iacute;s pronosticando como...</p>
+    <div class="prompt-user">
+      <span class="prompt-icon">&#x1F464;</span>
+      <span class="prompt-name" id="promptUserName"></span>
+      <span class="prompt-id" id="promptUserId"></span>
+    </div>
+    <button class="btn-primary" id="btnContinueUser">&#x25B6; Continuar</button>
+    <button class="btn-secondary" id="btnSwitchUser">&#x1F464; Cambiar usuario</button>
   </div>
 </div>
 

@@ -1818,7 +1818,31 @@
   </div>
 </div>
 
+<script src="https://unpkg.com/@supabase/supabase-js@2.39.0/dist/umd/supabase.min.js"></script>
 <script>
+var supabaseRealtime = null;
+function initRealtime() {
+  try {
+    if (typeof supabase === 'undefined' || !supabase.createClient) return;
+    var client = supabase.createClient('https://zrcvfntmatalcyyveoug.supabase.co', 'sb_publishable_i3dtRu9RJzb4KUbA9jsWaQ_joTzhgyc');
+    supabaseRealtime = client;
+    client.channel('live').on('postgres_changes', { event: '*', schema: 'public', table: 'match_results' }, function(p) {
+      if (!p.new || !p.new.match_key) return;
+      var map = JSON.parse(localStorage.getItem(RESULT_KEY) || '{}');
+      map[p.new.match_key] = { g1: p.new.g1, g2: p.new.g2 };
+      localStorage.setItem(RESULT_KEY, JSON.stringify(map));
+      loadResults(); renderDashboard(); renderRanking(); renderSavedPredictions();
+    }).subscribe();
+    client.channel('live_preds').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'predictions' }, function() {
+      syncFromSupabase().then(function() { renderRanking(); renderSavedPredictions(); });
+    }).subscribe();
+    client.channel('live_ko').on('postgres_changes', { event: '*', schema: 'public', table: 'knockout_state' }, function(p) {
+      if (!p.new || !p.new.rounds) return;
+      localStorage.setItem(KNOCKOUT_KEY, JSON.stringify(p.new.rounds));
+      renderKnockout(); renderDashboard();
+    }).subscribe();
+  } catch(e) { console.log('Realtime unavailable:', e.message); }
+}
 const codes = {
   'M&eacute;xico':'mx','Sud&aacute;frica':'za','Corea del Sur':'kr','Rep&uacute;blica Checa':'cz',
   'Canad&aacute;':'ca','Bosnia y Herzegovina':'ba','Catar':'qa','Suiza':'ch',
@@ -2195,7 +2219,7 @@ const STORAGE_KEY = 'mundial2026_preds';
 const RESULT_KEY = 'mundial2026_results';
 const USER_KEY = 'mundial2026_user';
 
-// --- Supabase online sync ---
+// --- Supabase REST helpers ---
 var SUPABASE_URL = 'https://zrcvfntmatalcyyveoug.supabase.co';
 var SUPABASE_ANON_KEY = 'sb_publishable_i3dtRu9RJzb4KUbA9jsWaQ_joTzhgyc';
 
@@ -2227,31 +2251,51 @@ function syncFromSupabase() {
   }).catch(function(e) { console.log('Supabase sync failed:', e.message); });
 }
 
-function uploadResults() {
-  var map = getRealResultsMap();
-  supabaseFetch('results', {
-    method: 'POST',
-    headers: { 'Prefer': 'resolution=merge-duplicates' },
-    body: JSON.stringify({ id: 1, data: map, updated_at: new Date().toISOString() })
-  }).catch(function(e) { console.log('Supabase results upload failed:', e.message); });
+function uploadMatchResult(key, g1, g2) {
+  supabaseFetch('match_results?match_key=eq.' + encodeURIComponent(key), {
+    method: 'PUT',
+    body: JSON.stringify({ match_key: key, g1: g1, g2: g2, updated_at: new Date().toISOString() })
+  }).catch(function(e) { console.log('Match upload failed:', e.message); });
 }
 
-function syncResults() {
-  return supabaseFetch('results?id=eq.1', { method: 'GET' }).then(function(r) {
+function loadMatchResults() {
+  return supabaseFetch('match_results', { method: 'GET' }).then(function(r) {
     if (!r.ok) throw new Error(r.statusText);
     return r.json();
   }).then(function(data) {
-    if (!data || !data.length || !data[0].data) return;
-    localStorage.setItem(RESULT_KEY, JSON.stringify(data[0].data));
+    if (!data || !data.length) return;
+    var map = {};
+    data.forEach(function(d) { map[d.match_key] = { g1: d.g1, g2: d.g2 }; });
+    localStorage.setItem(RESULT_KEY, JSON.stringify(map));
     loadResults();
     renderDashboard();
-  }).catch(function(e) { console.log('Supabase results sync failed:', e.message); });
+    renderRanking();
+    renderSavedPredictions();
+  }).catch(function(e) { console.log('Match results sync failed:', e.message); });
+}
+
+function uploadKnockoutState(state) {
+  supabaseFetch('knockout_state?id=eq.1', {
+    method: 'PUT',
+    body: JSON.stringify({ id: 1, rounds: state, updated_at: new Date().toISOString() })
+  }).catch(function(e) { console.log('Knockout upload failed:', e.message); });
+}
+
+function loadKnockoutState() {
+  return supabaseFetch('knockout_state?id=eq.1', { method: 'GET' }).then(function(r) {
+    if (!r.ok) throw new Error(r.statusText);
+    return r.json();
+  }).then(function(data) {
+    if (!data || !data.length || !data[0].rounds) return;
+    localStorage.setItem(KNOCKOUT_KEY, JSON.stringify(data[0].rounds));
+    renderKnockout();
+    renderDashboard();
+  }).catch(function(e) { console.log('Knockout sync failed:', e.message); });
 }
 
 function syncAll() {
   if (document.hidden) return;
   syncFromSupabase().then(function() { renderRanking(); renderSavedPredictions(); });
-  syncResults();
 }
 
 // --- User system ---
@@ -2456,7 +2500,6 @@ function savePredictions(all) {
 function saveResults() {
   var map = getRealResultsMap();
   localStorage.setItem(RESULT_KEY, JSON.stringify(map));
-  uploadResults();
 }
 
 function loadResults() {
@@ -2494,6 +2537,8 @@ function randomResults() {
   });
   document.querySelectorAll('.group-card').forEach(card => updateStandings(card));
   saveResults();
+  var map = getRealResultsMap();
+  Object.keys(map).forEach(function(k) { uploadMatchResult(k, map[k].g1, map[k].g2); });
   renderSavedPredictions();
   renderRanking();
   renderDashboard();
@@ -2622,19 +2667,29 @@ document.getElementById('btnRandom').addEventListener('click', () => { randomRes
 
 document.addEventListener('input', e => {
   if (e.target.classList.contains('pred-input')) updateSaveButton();
-  if (e.target.classList.contains('score-input')) { renderSavedPredictions(); renderRanking(); saveResults(); renderDashboard(); if (allGroupsComplete()) generateRound16(); renderKnockout(); }
+  if (e.target.classList.contains('score-input')) {
+    renderSavedPredictions(); renderRanking(); saveResults(); renderDashboard();
+    if (allGroupsComplete()) generateRound16(); renderKnockout();
+    var m = e.target.closest('.match-item'), c = e.target.closest('.group-card');
+    if (m && c) {
+      var n = m.querySelectorAll('.team-name'), l = c.querySelector('.badge').textContent;
+      var inp = m.querySelectorAll('.score-input');
+      uploadMatchResult(l + '|' + n[0].textContent.trim() + '|' + n[1].textContent.trim(), parseInt(inp[0].value)||0, parseInt(inp[1].value)||0);
+    }
+  }
   if (e.target.classList.contains('ko-score-input') || e.target.classList.contains('penalty-input') || e.target.classList.contains('penalty-sd-input')) { handleKoInput(); renderKnockout(); }
 });
 
 initUserSystem();
 initAdminSystem();
+initRealtime();
 
 syncFromSupabase().then(function() {
   renderRanking();
   renderSavedPredictions();
 });
-syncResults();
-setInterval(syncAll, 5000);
+loadMatchResults();
+loadKnockoutState();
 
 document.getElementById('btnSavePred').addEventListener('click', () => {
   try {
@@ -2841,6 +2896,7 @@ function loadKnockout() {
 
 function saveKnockout(state) {
   localStorage.setItem(KNOCKOUT_KEY, JSON.stringify(state));
+  uploadKnockoutState(state);
 }
 function clearKnockout() {
   localStorage.removeItem(KNOCKOUT_KEY);

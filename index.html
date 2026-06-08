@@ -216,6 +216,107 @@
     border-color: rgba(255,255,255,0.15);
   }
 
+  /* --- User system --- */
+  .user-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.2rem 0.5rem 0.2rem 0.6rem;
+    background: rgba(139,92,246,0.12);
+    border: 1px solid rgba(139,92,246,0.25);
+    border-radius: var(--radius-sm);
+    font-size: 0.72rem;
+    white-space: nowrap;
+  }
+  .user-badge .user-icon { font-size: 0.85rem; }
+  .user-badge .user-name { font-weight: 700; color: var(--fg); }
+  .user-badge .btn-change {
+    background: none; border: none;
+    color: var(--text-dim); font-size: 0.6rem;
+    cursor: pointer; padding: 0; text-decoration: underline;
+  }
+  .user-badge .btn-change:hover { color: var(--purple); }
+
+  .modal-overlay {
+    position: fixed; inset: 0; z-index: 9999;
+    background: rgba(0,0,0,0.7);
+    display: flex; align-items: center; justify-content: center;
+    backdrop-filter: blur(4px);
+  }
+  .modal-box {
+    background: linear-gradient(145deg, #151d30, #0f172a);
+    border: 1px solid rgba(139,92,246,0.25);
+    border-radius: 18px;
+    padding: 2rem 2rem 1.75rem;
+    max-width: 360px; width: 90%;
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+  .modal-box h2 { margin: 0 0 0.3rem; font-size: 1.15rem; color: var(--fg); }
+  .modal-box p { color: var(--text-dim); font-size: 0.82rem; margin: 0 0 1.25rem; line-height: 1.5; }
+  .modal-box input {
+    width: 100%; padding: 0.7rem 1rem;
+    border-radius: 10px; border: 1px solid rgba(139,92,246,0.3);
+    background: rgba(255,255,255,0.04);
+    color: var(--fg); font-size: 1rem; text-align: center;
+    box-sizing: border-box; margin-bottom: 0.75rem;
+    outline: none; transition: border-color 0.2s;
+  }
+  .modal-box input:focus { border-color: var(--purple); box-shadow: 0 0 0 3px rgba(139,92,246,0.15); }
+  .modal-box .btn-primary {
+    width: 100%; padding: 0.7rem;
+    border-radius: 10px; border: none;
+    background: linear-gradient(135deg, #7c3aed, #6d28d9);
+    color: #fff; font-size: 0.95rem; font-weight: 600;
+    cursor: pointer; transition: opacity 0.2s;
+  }
+  .modal-box .btn-primary:hover { opacity: 0.9; }
+  .modal-box .modal-error { color: #ef4444; font-size: 0.75rem; margin-top: 0.5rem; display: none; }
+  .modal-box .btn-skip {
+    background: none; border: none;
+    color: var(--text-dim); font-size: 0.7rem;
+    cursor: pointer; margin-top: 1rem; text-decoration: underline;
+  }
+  .modal-box .btn-skip:hover { color: var(--text); }
+
+  /* --- Admin system --- */
+  .nav-admin-link {
+    margin-left: auto;
+    font-size: 0.7rem;
+    opacity: 0.35;
+    cursor: pointer;
+    text-decoration: none;
+    transition: opacity 0.2s;
+    flex-shrink: 0;
+    padding: 0.2rem;
+    line-height: 1;
+  }
+  .nav-admin-link:hover { opacity: 0.7; }
+  .nav-admin-link.active { opacity: 0.9; }
+
+  .admin-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.15rem 0.4rem;
+    background: rgba(251,191,36,0.12);
+    border: 1px solid rgba(251,191,36,0.25);
+    border-radius: var(--radius-sm);
+    font-size: 0.65rem;
+    white-space: nowrap;
+  }
+  .admin-badge .admin-label { color: var(--gold); font-weight: 700; }
+  .admin-badge .btn-exit {
+    background: none; border: none;
+    color: var(--text-dim); font-size: 0.6rem;
+    cursor: pointer; padding: 0; text-decoration: underline;
+  }
+  .admin-badge .btn-exit:hover { color: var(--gold); }
+
+  input[readonly] {
+    cursor: default;
+  }
+
   /* --- Guide --- */
   .guide-section {
     max-width: 1200px;
@@ -1541,6 +1642,7 @@
       <a class="nav-btn" data-target="quarter">4tos</a>
       <a class="nav-btn" data-target="semi">Semis</a>
       <a class="nav-btn" data-target="final">Final</a>
+      <a class="nav-admin-link" id="adminToggle" title="Modo administrador">&#x1F511;</a>
     </div>
   </nav>
   <div id="stage-groups" class="stage-view active">
@@ -1564,9 +1666,16 @@
         <span class="ranking-toggle-icon open">&#x25B6;</span>
         &#x1F3C6; Ranking de pronosticadores
         <span class="pred-bar">
-          <label for="predName">&#x1F3AF;</label>
-          <input type="text" id="predName" class="name-input" placeholder="Tu nombre" maxlength="40">
-          <button class="btn-save" id="btnSavePred" disabled>Guardar</button>
+          <span class="user-badge" id="userBadge" style="display:none">
+            <span class="user-icon">&#x1F3AF;</span>
+            <span class="user-name" id="userDisplayName"></span>
+            <button class="btn-change" id="btnChangeUser">Cambiar</button>
+          </span>
+          <span class="admin-badge" id="adminBadge" style="display:none">
+            <span class="admin-label">&#x1F511; Admin</span>
+            <button class="btn-exit" id="btnExitAdmin">Salir</button>
+          </span>
+          <button class="btn-save" id="btnSavePred" disabled>Guardar pron&oacute;stico</button>
           <span class="save-msg" id="saveMsg"></span>
           <button class="btn-random" id="btnRandom" title="Rellenar todos los resultados con marcadores aleatorios">&#x1F3B2; Resultados aleatorios</button>
         </span>
@@ -2002,6 +2111,123 @@ function getRealResultsMap() {
 // --- Predicciones ---
 const STORAGE_KEY = 'mundial2026_preds';
 const RESULT_KEY = 'mundial2026_results';
+const USER_KEY = 'mundial2026_user';
+
+// --- User system ---
+function getCurrentUser() {
+  try { return JSON.parse(localStorage.getItem(USER_KEY)) || null; }
+  catch { return null; }
+}
+
+function saveUser(user) {
+  localStorage.setItem(USER_KEY, JSON.stringify(user));
+}
+
+function createUser(name) {
+  var id = name.replace(/[^a-zA-Z0-9]/g,'').toUpperCase() + '#' + Math.floor(1000 + Math.random()*9000);
+  var user = { id: id, name: name.trim(), createdAt: new Date().toISOString() };
+  saveUser(user);
+  return user;
+}
+
+function showUserModal() {
+  document.getElementById('userModal').style.display = '';
+  document.getElementById('usernameInput').value = '';
+  document.getElementById('modalError').style.display = 'none';
+  document.getElementById('usernameInput').focus();
+}
+
+function hideUserModal() {
+  document.getElementById('userModal').style.display = 'none';
+}
+
+function applyUser(user) {
+  document.getElementById('userDisplayName').textContent = user.name;
+  document.getElementById('userBadge').style.display = '';
+  document.getElementById('btnSavePred').disabled = true;
+  updateSaveButton();
+}
+
+function initUserSystem() {
+  // Register event listeners once (regardless of user state)
+  document.getElementById('btnConfirmUser').addEventListener('click', function() {
+    var name = document.getElementById('usernameInput').value.trim();
+    if (!name || name.length < 2) { document.getElementById('modalError').style.display = ''; return; }
+    var user = createUser(name);
+    hideUserModal();
+    applyUser(user);
+  });
+  document.getElementById('usernameInput').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') document.getElementById('btnConfirmUser').click();
+  });
+  document.getElementById('btnChangeUser').addEventListener('click', function() {
+    localStorage.removeItem(USER_KEY);
+    document.getElementById('btnSavePred').disabled = true;
+    showUserModal();
+  });
+  // Check existing user
+  var user = getCurrentUser();
+  if (user) { applyUser(user); }
+  else { showUserModal(); }
+}
+
+// --- Admin system ---
+var ADMIN_CODE = 'admin';
+
+function isAdmin() {
+  try { return localStorage.getItem('mundial2026_admin') === 'true'; }
+  catch { return false; }
+}
+
+function enableAdmin() {
+  localStorage.setItem('mundial2026_admin', 'true');
+  applyAdminState();
+}
+
+function disableAdmin() {
+  localStorage.removeItem('mundial2026_admin');
+  applyAdminState();
+}
+
+function applyAdminState() {
+  var admin = isAdmin();
+  document.querySelectorAll('.score-input').forEach(function(inp) { inp.readOnly = !admin; });
+  document.querySelectorAll('.ko-score-input, .penalty-input, .penalty-sd-input').forEach(function(inp) { inp.readOnly = !admin; });
+  var btn = document.getElementById('btnRandom');
+  if (btn) btn.style.display = admin ? '' : 'none';
+  var badge = document.getElementById('adminBadge');
+  if (badge) badge.style.display = admin ? '' : 'none';
+  var toggle = document.getElementById('adminToggle');
+  if (toggle) toggle.classList.toggle('active', admin);
+}
+
+function initAdminSystem() {
+  document.getElementById('adminToggle').addEventListener('click', function() {
+    if (isAdmin()) { disableAdmin(); return; }
+    document.getElementById('adminModal').style.display = '';
+    document.getElementById('adminCodeInput').value = '';
+    document.getElementById('adminModalError').style.display = 'none';
+    document.getElementById('adminCodeInput').focus();
+  });
+  document.getElementById('btnConfirmAdmin').addEventListener('click', function() {
+    if (document.getElementById('adminCodeInput').value.trim() === ADMIN_CODE) {
+      document.getElementById('adminModal').style.display = 'none';
+      enableAdmin();
+    } else {
+      document.getElementById('adminModalError').style.display = '';
+    }
+  });
+  document.getElementById('adminCodeInput').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') document.getElementById('btnConfirmAdmin').click();
+  });
+  document.getElementById('btnCancelAdmin').addEventListener('click', function() {
+    document.getElementById('adminModal').style.display = 'none';
+  });
+  document.getElementById('btnExitAdmin').addEventListener('click', function() {
+    disableAdmin();
+  });
+  applyAdminState();
+}
 
 function loadPredictions() {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
@@ -2097,7 +2323,7 @@ function renderSavedPredictions() {
     return `
       <div class="saved-card">
         <div class="saved-header">
-          <span class="saved-name">&#x1F3AF; ${entry.name}</span>
+          <span class="saved-name">&#x1F3AF; ${entry.userName || entry.name}</span>
           <span>
             ${totalHtml}
             <span class="saved-date">${dateStr}</span>
@@ -2137,12 +2363,12 @@ function gatherPredictions() {
 }
 
 function updateSaveButton() {
-  const name = document.getElementById('predName').value.trim();
-  const hasAny = Array.from(document.querySelectorAll('.pred-section')).some(s => {
-    const inp = s.querySelectorAll('.pred-input');
+  var user = getCurrentUser();
+  var hasAny = Array.from(document.querySelectorAll('.pred-section')).some(function(s) {
+    var inp = s.querySelectorAll('.pred-input');
     return inp[0].value !== '' && inp[1].value !== '';
   });
-  document.getElementById('btnSavePred').disabled = !name || !hasAny;
+  document.getElementById('btnSavePred').disabled = !user || !hasAny;
 }
 
 function renderRanking() {
@@ -2154,7 +2380,8 @@ function renderRanking() {
   const latest = [];
   for (let i = all.length - 1; i >= 0; i--) {
     const e = all[i];
-    if (!seen[e.name]) { seen[e.name] = true; latest.push(e); }
+    const key = e.userId || e.name;
+    if (!seen[key]) { seen[key] = true; latest.push(e); }
   }
   const rows = latest.map(entry => {
     let total = 0, pj = 0, c3 = 0, c1 = 0, c0 = 0;
@@ -2164,7 +2391,7 @@ function renderRanking() {
       const pts = calcPoints(rr.g1, rr.g2, m.g1, m.g2);
       total += pts; pj++; pts === 3 ? c3++ : pts === 1 ? c1++ : c0++;
     });
-    return { name: entry.name, pts: total, pj, c3, c1, c0 };
+    return { name: entry.userName || entry.name, pts: total, pj, c3, c1, c0 };
   });
   rows.sort((a, b) => b.pts - a.pts || b.c3 - a.c3 || b.pj - a.pj);
   tbody.innerHTML = rows.map((r, i) => {
@@ -2174,8 +2401,6 @@ function renderRanking() {
   if (!rows.length) tbody.innerHTML = '<tr><td colspan="7" class="empty-rank">Sin datos. Carg\u00E1 resultados y guard\u00E1 pron\u00F3sticos.</td></tr>';
 }
 
-document.getElementById('predName').addEventListener('input', updateSaveButton);
-
 document.getElementById('btnRandom').addEventListener('click', () => { randomResults(); generateRound16(); renderKnockout(); });
 
 document.addEventListener('input', e => {
@@ -2184,22 +2409,25 @@ document.addEventListener('input', e => {
   if (e.target.classList.contains('ko-score-input') || e.target.classList.contains('penalty-input') || e.target.classList.contains('penalty-sd-input')) { handleKoInput(); renderKnockout(); }
 });
 
+initUserSystem();
+initAdminSystem();
+
 document.getElementById('btnSavePred').addEventListener('click', () => {
   try {
-    const name = document.getElementById('predName').value.trim();
-    if (!name) return;
-    const preds = gatherPredictions();
-    if (!preds.length) { document.getElementById('saveMsg').textContent = '\u26A0\uFE0F Complet\u00E1 al menos un marcador'; setTimeout(() => document.getElementById('saveMsg').textContent = '', 3000); return; }
-    const all = loadPredictions();
-    all.push({ name, date: new Date().toISOString(), matches: preds });
+    var user = getCurrentUser();
+    if (!user) return;
+    var preds = gatherPredictions();
+    if (!preds.length) { document.getElementById('saveMsg').textContent = '\u26A0\uFE0F Complet\u00E1 al menos un marcador'; setTimeout(function() { document.getElementById('saveMsg').textContent = ''; }, 3000); return; }
+    var all = loadPredictions();
+    all.push({ userId: user.id, userName: user.name, date: new Date().toISOString(), matches: preds });
     savePredictions(all);
     renderSavedPredictions();
     renderRanking();
     expandHistory(true);
     expandRanking(true);
     document.getElementById('saveMsg').textContent = '\u2705 Guardado';
-    setTimeout(() => document.getElementById('saveMsg').textContent = '', 2500);
-    document.querySelectorAll('.pred-input').forEach(i => i.value = '');
+    setTimeout(function() { document.getElementById('saveMsg').textContent = ''; }, 2500);
+    document.querySelectorAll('.pred-input').forEach(function(i) { i.value = ''; });
     updateSaveButton();
   } catch (e) {
     document.getElementById('saveMsg').textContent = '\u274C Error: ' + e.message;
@@ -2754,6 +2982,7 @@ function renderKnockout() {
   });
 
   renderDashboard();
+  applyAdminState();
 }
 
 // --- Sports Dashboard ---
@@ -2917,5 +3146,29 @@ function renderDashboard() {
   switchStage('groups');
 })();
 </script>
+
+<!-- Admin login modal -->
+<div class="modal-overlay" id="adminModal" style="display:none">
+  <div class="modal-box">
+    <h2>&#x1F511; Modo Administrador</h2>
+    <p>Ingres&aacute; el c&oacute;digo para editar resultados oficiales y eliminatorias.</p>
+    <input type="password" id="adminCodeInput" placeholder="C&oacute;digo" maxlength="20" autocomplete="off">
+    <button class="btn-primary" id="btnConfirmAdmin">Ingresar</button>
+    <div class="modal-error" id="adminModalError">C&oacute;digo incorrecto</div>
+    <button class="btn-skip" id="btnCancelAdmin">Cancelar</button>
+  </div>
+</div>
+
+<!-- User registration modal -->
+<div class="modal-overlay" id="userModal" style="display:none">
+  <div class="modal-box">
+    <h2>&#x1F3C6; Quiniela Mundial 2026</h2>
+    <p>Ingres&aacute; tu nombre para empezar a pronosticar.<br>Tus predicciones se guardar&aacute;n autom&aacute;ticamente.</p>
+    <input type="text" id="usernameInput" placeholder="Ej: Luca" maxlength="30" autocomplete="off">
+    <button class="btn-primary" id="btnConfirmUser">Ingresar</button>
+    <div class="modal-error" id="modalError">Ingres&aacute; un nombre v&aacute;lido</div>
+  </div>
+</div>
+
 </body>
 </html>

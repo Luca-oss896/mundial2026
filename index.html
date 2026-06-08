@@ -2330,10 +2330,6 @@ function disableAdmin() {
 
 function applyAdminState() {
   var admin = isAdmin();
-  document.querySelectorAll('.score-input').forEach(function(inp) { inp.readOnly = !admin; });
-  document.querySelectorAll('.ko-score-input, .penalty-input, .penalty-sd-input').forEach(function(inp) { inp.readOnly = !admin; });
-  var btn = document.getElementById('btnRandom');
-  if (btn) btn.style.display = admin ? '' : 'none';
   var badge = document.getElementById('adminBadge');
   if (badge) badge.style.display = admin ? '' : 'none';
   var toggle = document.getElementById('adminToggle');

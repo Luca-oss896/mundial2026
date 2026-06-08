@@ -2195,6 +2195,38 @@ const STORAGE_KEY = 'mundial2026_preds';
 const RESULT_KEY = 'mundial2026_results';
 const USER_KEY = 'mundial2026_user';
 
+// --- Supabase online sync ---
+var SUPABASE_URL = 'https://zrcvfntmatalcyyveoug.supabase.co';
+var SUPABASE_ANON_KEY = 'sb_publishable_i3dtRu9RJzb4KUbA9jsWaQ_joTzhgyc';
+
+function supabaseFetch(path, opts) {
+  return fetch(SUPABASE_URL + '/rest/v1/' + path, {
+    headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY, 'Content-Type': 'application/json', ...(opts.headers || {}) },
+    ...opts
+  });
+}
+
+function uploadPrediction(entry) {
+  supabaseFetch('predictions', {
+    method: 'POST', body: JSON.stringify({ user_id: entry.userId, user_name: entry.userName, date: entry.date, matches: entry.matches })
+  }).catch(function(e) { console.log('Supabase upload failed:', e.message); });
+}
+
+function syncFromSupabase() {
+  return supabaseFetch('predictions?order=date.desc', { method: 'GET' }).then(function(r) {
+    if (!r.ok) throw new Error(r.statusText);
+    return r.json();
+  }).then(function(data) {
+    if (!data || !data.length) return;
+    var online = data.map(function(d) { return { userId: d.user_id, userName: d.user_name, date: d.date, matches: d.matches }; });
+    var local = loadPredictions();
+    var existing = {};
+    local.forEach(function(e) { existing[e.userId + '|' + e.date] = true; });
+    online.forEach(function(e) { if (!existing[e.userId + '|' + e.date]) { local.push(e); } });
+    savePredictions(local);
+  }).catch(function(e) { console.log('Supabase sync failed:', e.message); });
+}
+
 // --- User system ---
 function getCurrentUser() {
   try { return JSON.parse(localStorage.getItem(USER_KEY)) || null; }
@@ -2569,17 +2601,25 @@ document.addEventListener('input', e => {
 initUserSystem();
 initAdminSystem();
 
+syncFromSupabase().then(function() {
+  renderRanking();
+  renderSavedPredictions();
+});
+
 document.getElementById('btnSavePred').addEventListener('click', () => {
   try {
     var user = getCurrentUser();
     if (!user) return;
     var preds = gatherPredictions();
     if (!preds.length) { document.getElementById('saveMsg').textContent = '\u26A0\uFE0F Complet\u00E1 al menos un marcador'; setTimeout(function() { document.getElementById('saveMsg').textContent = ''; }, 3000); return; }
+    var entry = { userId: user.id, userName: user.name, date: new Date().toISOString(), matches: preds };
     var all = loadPredictions();
-    all.push({ userId: user.id, userName: user.name, date: new Date().toISOString(), matches: preds });
+    all.push(entry);
     savePredictions(all);
+    uploadPrediction(entry);
     renderSavedPredictions();
     renderRanking();
+    syncFromSupabase().then(function() { renderRanking(); renderSavedPredictions(); });
     expandHistory(true);
     expandRanking(true);
     document.getElementById('saveMsg').textContent = '\u2705 Guardado';

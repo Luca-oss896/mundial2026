@@ -1780,6 +1780,44 @@
     </div>
     <div id="final-content"></div>
   </div>
+<!-- Admin login modal -->
+<div class="modal-overlay" id="adminModal" style="display:none">
+  <div class="modal-box">
+    <h2>&#x1F511; Modo Administrador</h2>
+    <p>Ingres&aacute; el c&oacute;digo para editar resultados oficiales y eliminatorias.</p>
+    <input type="password" id="adminCodeInput" placeholder="C&oacute;digo" maxlength="20" autocomplete="off">
+    <button class="btn-primary" id="btnConfirmAdmin">Ingresar</button>
+    <div class="modal-error" id="adminModalError">C&oacute;digo incorrecto</div>
+    <button class="btn-skip" id="btnCancelAdmin">Cancelar</button>
+  </div>
+</div>
+
+<!-- User prompt overlay -->
+<div class="modal-overlay" id="userPrompt" style="display:none">
+  <div class="modal-box">
+    <h2>&#x1F3AF; Quiniela Mundial 2026</h2>
+    <p>&iquest;Segu&iacute;s pronosticando como...</p>
+    <div class="prompt-user">
+      <span class="prompt-icon">&#x1F464;</span>
+      <span class="prompt-name" id="promptUserName"></span>
+      <span class="prompt-id" id="promptUserId"></span>
+    </div>
+    <button class="btn-primary" id="btnContinueUser">&#x25B6; Continuar</button>
+    <button class="btn-secondary" id="btnSwitchUser">&#x1F464; Cambiar usuario</button>
+  </div>
+</div>
+
+<!-- User registration modal -->
+<div class="modal-overlay" id="userModal" style="display:none">
+  <div class="modal-box">
+    <h2>&#x1F3C6; Quiniela Mundial 2026</h2>
+    <p>Ingres&aacute; tu nombre para empezar a pronosticar.<br>Tus predicciones se guardar&aacute;n autom&aacute;ticamente.</p>
+    <input type="text" id="usernameInput" placeholder="Ej: Luca" maxlength="30" autocomplete="off">
+    <button class="btn-primary" id="btnConfirmUser">Ingresar</button>
+    <div class="modal-error" id="modalError">Ingres&aacute; un nombre v&aacute;lido</div>
+  </div>
+</div>
+
 <script>
 const codes = {
   'M&eacute;xico':'mx','Sud&aacute;frica':'za','Corea del Sur':'kr','Rep&uacute;blica Checa':'cz',
@@ -2175,66 +2213,101 @@ function createUser(name) {
 }
 
 function showUserModal() {
-  document.getElementById('userPrompt').style.display = 'none';
-  document.getElementById('userModal').style.display = '';
-  document.getElementById('usernameInput').value = '';
-  document.getElementById('modalError').style.display = 'none';
-  document.getElementById('usernameInput').focus();
+  var p = document.getElementById('userPrompt');
+  if (p) p.style.display = 'none';
+  var m = document.getElementById('userModal');
+  if (!m) return;
+  m.style.display = '';
+  var inp = document.getElementById('usernameInput');
+  if (inp) { inp.value = ''; inp.focus(); }
+  var e = document.getElementById('modalError');
+  if (e) e.style.display = 'none';
 }
 
 function hideUserModal() {
-  document.getElementById('userModal').style.display = 'none';
+  var m = document.getElementById('userModal');
+  if (m) m.style.display = 'none';
 }
 
 function showUserPrompt() {
   var user = getCurrentUser();
   if (!user) { showUserModal(); return; }
-  document.getElementById('promptUserName').textContent = user.name;
-  document.getElementById('promptUserId').textContent = user.id;
-  document.getElementById('userPrompt').style.display = '';
+  var pn = document.getElementById('promptUserName');
+  if (pn) pn.textContent = user.name;
+  var pi = document.getElementById('promptUserId');
+  if (pi) pi.textContent = user.id;
+  var p = document.getElementById('userPrompt');
+  if (p) p.style.display = '';
 }
 
 function hideUserPrompt() {
-  document.getElementById('userPrompt').style.display = 'none';
+  var p = document.getElementById('userPrompt');
+  if (p) p.style.display = 'none';
 }
 
 function applyUser(user) {
-  document.getElementById('userBadge').style.display = '';
-  document.getElementById('userDisplayName').textContent = user.name;
-  document.getElementById('btnSavePred').disabled = true;
+  var b = document.getElementById('userBadge');
+  if (b) b.style.display = '';
+  var d = document.getElementById('userDisplayName');
+  if (d) d.textContent = user.name;
+  var s = document.getElementById('btnSavePred');
+  if (s) s.disabled = true;
   updateSaveButton();
 }
 
 function switchUser() {
   localStorage.removeItem(USER_KEY);
-  document.getElementById('userBadge').style.display = 'none';
-  document.getElementById('btnSavePred').disabled = true;
+  var b = document.getElementById('userBadge');
+  if (b) b.style.display = 'none';
+  var s = document.getElementById('btnSavePred');
+  if (s) s.disabled = true;
   showUserModal();
 }
 
 function initUserSystem() {
-  // Register event listeners once
-  document.getElementById('btnConfirmUser').addEventListener('click', function() {
-    var name = document.getElementById('usernameInput').value.trim();
-    if (!name || name.length < 2) { document.getElementById('modalError').style.display = ''; return; }
+  var el;
+
+  el = document.getElementById('btnConfirmUser');
+  if (el) el.addEventListener('click', function() {
+    var inp = document.getElementById('usernameInput');
+    if (!inp) return;
+    var name = inp.value.trim();
+    if (!name || name.length < 2) {
+      var me = document.getElementById('modalError');
+      if (me) me.style.display = '';
+      return;
+    }
     var user = createUser(name);
     hideUserModal();
     applyUser(user);
   });
-  document.getElementById('usernameInput').addEventListener('keydown', function(e) {
-    if (e.key === 'Enter') document.getElementById('btnConfirmUser').click();
+
+  el = document.getElementById('usernameInput');
+  if (el) el.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+      var b = document.getElementById('btnConfirmUser');
+      if (b) b.click();
+    }
   });
-  document.getElementById('btnChangeUser').addEventListener('click', switchUser);
-  document.getElementById('btnContinueUser').addEventListener('click', function() {
+
+  el = document.getElementById('btnChangeUser');
+  if (el) el.addEventListener('click', switchUser);
+
+  el = document.getElementById('btnContinueUser');
+  if (el) el.addEventListener('click', function() {
     hideUserPrompt();
     var user = getCurrentUser();
     if (user) applyUser(user);
   });
-  document.getElementById('btnSwitchUser').addEventListener('click', switchUser);
-  // On load: show prompt if user exists, else show modal
+
+  el = document.getElementById('btnSwitchUser');
+  if (el) el.addEventListener('click', switchUser);
+
   var user = getCurrentUser();
   if (user) { showUserPrompt(); }
   else { showUserModal(); }
+
+  console.log('initUserSystem OK');
 }
 
 // --- Admin system ---
@@ -2268,31 +2341,52 @@ function applyAdminState() {
 }
 
 function initAdminSystem() {
-  document.getElementById('adminToggle').addEventListener('click', function() {
+  var el;
+
+  el = document.getElementById('adminToggle');
+  if (el) el.addEventListener('click', function() {
     if (isAdmin()) { disableAdmin(); return; }
-    document.getElementById('adminModal').style.display = '';
-    document.getElementById('adminCodeInput').value = '';
-    document.getElementById('adminModalError').style.display = 'none';
-    document.getElementById('adminCodeInput').focus();
+    var m = document.getElementById('adminModal');
+    if (m) m.style.display = '';
+    var c = document.getElementById('adminCodeInput');
+    if (c) { c.value = ''; c.focus(); }
+    var e = document.getElementById('adminModalError');
+    if (e) e.style.display = 'none';
   });
-  document.getElementById('btnConfirmAdmin').addEventListener('click', function() {
-    if (document.getElementById('adminCodeInput').value.trim() === ADMIN_CODE) {
-      document.getElementById('adminModal').style.display = 'none';
+
+  el = document.getElementById('btnConfirmAdmin');
+  if (el) el.addEventListener('click', function() {
+    var c = document.getElementById('adminCodeInput');
+    if (!c) return;
+    if (c.value.trim() === ADMIN_CODE) {
+      var m = document.getElementById('adminModal');
+      if (m) m.style.display = 'none';
       enableAdmin();
     } else {
-      document.getElementById('adminModalError').style.display = '';
+      var e = document.getElementById('adminModalError');
+      if (e) e.style.display = '';
     }
   });
-  document.getElementById('adminCodeInput').addEventListener('keydown', function(e) {
-    if (e.key === 'Enter') document.getElementById('btnConfirmAdmin').click();
+
+  el = document.getElementById('adminCodeInput');
+  if (el) el.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+      var b = document.getElementById('btnConfirmAdmin');
+      if (b) b.click();
+    }
   });
-  document.getElementById('btnCancelAdmin').addEventListener('click', function() {
-    document.getElementById('adminModal').style.display = 'none';
+
+  el = document.getElementById('btnCancelAdmin');
+  if (el) el.addEventListener('click', function() {
+    var m = document.getElementById('adminModal');
+    if (m) m.style.display = 'none';
   });
-  document.getElementById('btnExitAdmin').addEventListener('click', function() {
-    disableAdmin();
-  });
+
+  el = document.getElementById('btnExitAdmin');
+  if (el) el.addEventListener('click', disableAdmin);
+
   applyAdminState();
+  console.log('initAdminSystem OK');
 }
 
 function loadPredictions() {
@@ -2434,7 +2528,8 @@ function updateSaveButton() {
     var inp = s.querySelectorAll('.pred-input');
     return inp[0].value !== '' && inp[1].value !== '';
   });
-  document.getElementById('btnSavePred').disabled = !user || !hasAny;
+  var btn = document.getElementById('btnSavePred');
+  if (btn) btn.disabled = !user || !hasAny;
 }
 
 function renderRanking() {
@@ -3212,44 +3307,6 @@ function renderDashboard() {
   switchStage('groups');
 })();
 </script>
-
-<!-- Admin login modal -->
-<div class="modal-overlay" id="adminModal" style="display:none">
-  <div class="modal-box">
-    <h2>&#x1F511; Modo Administrador</h2>
-    <p>Ingres&aacute; el c&oacute;digo para editar resultados oficiales y eliminatorias.</p>
-    <input type="password" id="adminCodeInput" placeholder="C&oacute;digo" maxlength="20" autocomplete="off">
-    <button class="btn-primary" id="btnConfirmAdmin">Ingresar</button>
-    <div class="modal-error" id="adminModalError">C&oacute;digo incorrecto</div>
-    <button class="btn-skip" id="btnCancelAdmin">Cancelar</button>
-  </div>
-</div>
-
-<!-- User prompt overlay -->
-<div class="modal-overlay" id="userPrompt" style="display:none">
-  <div class="modal-box">
-    <h2>&#x1F3AF; Quiniela Mundial 2026</h2>
-    <p>&iquest;Segu&iacute;s pronosticando como...</p>
-    <div class="prompt-user">
-      <span class="prompt-icon">&#x1F464;</span>
-      <span class="prompt-name" id="promptUserName"></span>
-      <span class="prompt-id" id="promptUserId"></span>
-    </div>
-    <button class="btn-primary" id="btnContinueUser">&#x25B6; Continuar</button>
-    <button class="btn-secondary" id="btnSwitchUser">&#x1F464; Cambiar usuario</button>
-  </div>
-</div>
-
-<!-- User registration modal -->
-<div class="modal-overlay" id="userModal" style="display:none">
-  <div class="modal-box">
-    <h2>&#x1F3C6; Quiniela Mundial 2026</h2>
-    <p>Ingres&aacute; tu nombre para empezar a pronosticar.<br>Tus predicciones se guardar&aacute;n autom&aacute;ticamente.</p>
-    <input type="text" id="usernameInput" placeholder="Ej: Luca" maxlength="30" autocomplete="off">
-    <button class="btn-primary" id="btnConfirmUser">Ingresar</button>
-    <div class="modal-error" id="modalError">Ingres&aacute; un nombre v&aacute;lido</div>
-  </div>
-</div>
 
 </body>
 </html>

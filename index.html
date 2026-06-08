@@ -2227,6 +2227,33 @@ function syncFromSupabase() {
   }).catch(function(e) { console.log('Supabase sync failed:', e.message); });
 }
 
+function uploadResults() {
+  var map = getRealResultsMap();
+  supabaseFetch('results', {
+    method: 'POST',
+    headers: { 'Prefer': 'resolution=merge-duplicates' },
+    body: JSON.stringify({ id: 1, data: map, updated_at: new Date().toISOString() })
+  }).catch(function(e) { console.log('Supabase results upload failed:', e.message); });
+}
+
+function syncResults() {
+  return supabaseFetch('results?id=eq.1', { method: 'GET' }).then(function(r) {
+    if (!r.ok) throw new Error(r.statusText);
+    return r.json();
+  }).then(function(data) {
+    if (!data || !data.length || !data[0].data) return;
+    localStorage.setItem(RESULT_KEY, JSON.stringify(data[0].data));
+    loadResults();
+    renderDashboard();
+  }).catch(function(e) { console.log('Supabase results sync failed:', e.message); });
+}
+
+function syncAll() {
+  if (document.hidden) return;
+  syncFromSupabase().then(function() { renderRanking(); renderSavedPredictions(); });
+  syncResults();
+}
+
 // --- User system ---
 function getCurrentUser() {
   try { return JSON.parse(localStorage.getItem(USER_KEY)) || null; }
@@ -2427,8 +2454,9 @@ function savePredictions(all) {
 }
 
 function saveResults() {
-  const map = getRealResultsMap();
+  var map = getRealResultsMap();
   localStorage.setItem(RESULT_KEY, JSON.stringify(map));
+  uploadResults();
 }
 
 function loadResults() {
@@ -2605,6 +2633,8 @@ syncFromSupabase().then(function() {
   renderRanking();
   renderSavedPredictions();
 });
+syncResults();
+setInterval(syncAll, 5000);
 
 document.getElementById('btnSavePred').addEventListener('click', () => {
   try {

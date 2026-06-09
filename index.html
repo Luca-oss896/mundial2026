@@ -2246,8 +2246,16 @@ function supabaseFetch(path, opts) {
 function uploadPrediction(entry) {
   supabaseFetch('predictions', {
     method: 'POST',
-    headers: { 'Prefer': 'resolution=merge-duplicates' },
     body: JSON.stringify({ user_id: entry.userId, user_name: entry.userName, date: entry.date, matches: entry.matches })
+  }).then(function(r) {
+    if (r.status === 409) {
+      return supabaseFetch('predictions?user_id=eq.' + encodeURIComponent(entry.userId), {
+        method: 'PATCH',
+        body: JSON.stringify({ user_name: entry.userName, date: entry.date, matches: entry.matches })
+      });
+    } else if (!r.ok) {
+      console.log('Supabase upload: unexpected status', r.status);
+    }
   }).catch(function(e) { console.log('Supabase upload:', e.message); });
 }
 
@@ -2735,6 +2743,9 @@ document.getElementById('btnSavePred').addEventListener('click', () => {
     var all = loadPredictions().filter(function(e) { return e.userId !== user.id; });
     all.push(entry);
     savePredictions(all);
+    // If user was previously marked as deleted, unmark them (new save)
+    var d = getDeletedUserIds();
+    if (d[user.id]) { delete d[user.id]; localStorage.setItem(MUNDIAL2026_DELETED, JSON.stringify(d)); }
     uploadPrediction(entry);
     renderSavedPredictions();
     renderRanking();

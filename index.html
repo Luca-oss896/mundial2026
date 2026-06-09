@@ -2256,18 +2256,27 @@ function supabaseFetch(path, opts) {
 }
 
 function uploadPrediction(entry) {
-  supabaseFetch('predictions', {
-    method: 'POST',
-    body: JSON.stringify({ user_id: entry.userId, user_name: entry.userName, date: entry.date, matches: entry.matches })
-  }).then(function(r) {
-    if (r.status === 409) {
-      return supabaseFetch('predictions?user_id=eq.' + encodeURIComponent(entry.userId), {
-        method: 'PATCH',
-        body: JSON.stringify({ user_name: entry.userName, date: entry.date, matches: entry.matches })
-      });
-    } else if (!r.ok) {
-      console.log('Supabase upload: unexpected status', r.status);
-    }
+  console.log('uploadPrediction userId:', entry.userId);
+  var encId = encodeURIComponent(entry.userId);
+  supabaseFetch('predictions?user_id=eq.' + encId + '&select=user_id', { method: 'GET' }).then(function(r) {
+    console.log('GET status:', r.status);
+    return r.text().then(function(txt) {
+      console.log('GET body:', txt);
+      var existing = JSON.parse(txt);
+      if (existing && existing.length) {
+        console.log('User exists, PATCHing');
+        supabaseFetch('predictions?user_id=eq.' + encId, {
+          method: 'PATCH',
+          body: JSON.stringify({ user_name: entry.userName, date: entry.date, matches: entry.matches })
+        }).then(function(pr) { console.log('PATCH status:', pr.status); }).catch(function(e) { console.log('PATCH error:', e.message); });
+      } else {
+        console.log('User NOT found, POSTing');
+        supabaseFetch('predictions', {
+          method: 'POST',
+          body: JSON.stringify({ user_id: entry.userId, user_name: entry.userName, date: entry.date, matches: entry.matches })
+        }).then(function(pr) { console.log('POST status:', pr.status); }).catch(function(e) { console.log('POST error:', e.message); });
+      }
+    });
   }).catch(function(e) { console.log('Supabase upload:', e.message); });
 }
 
